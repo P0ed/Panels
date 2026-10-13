@@ -76,29 +76,29 @@ struct EditorView: View {
                 Text(state.zoom.map { "\(Int($0 * 100))%" } ?? "Fit")
                     .monospacedDigit()
                     .frame(minWidth: 34)
+                    .modifier(ToolbarSpacing.label)
             }
+            .modifier(ToolbarSpacing.control)
             .help("Preview zoom")
         }
         ToolbarItemGroup(placement: .primaryAction) {
             Menu {
-                Picker("Image Resolution", selection: $state.exportResolution) {
-                    ForEach(ExportResolution.allCases) { resolution in
-                        Text(resolution.label).tag(resolution)
-                    }
-                }
+				ForEach(ExportResolution.allCases) { resolution in
+					Button(resolution.label) { state.exportResolution = resolution }
+				}
             } label: {
                 Text(state.exportResolution.label).font(.subheadline).monospacedDigit()
+                    .modifier(ToolbarSpacing.label)
             }
+            .modifier(ToolbarSpacing.control)
             .help("PNG export resolution")
-            Button(action: editor.exportPNG) {
-                HStack(spacing: 6) {
-                    if state.isExporting {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Image(systemName: "square.and.arrow.up")
-                    }
-                    Text("Export PNG")
-                }
+
+			Button(action: editor.exportPNG) {
+				if state.isExporting {
+					ProgressView().controlSize(.small)
+				} else {
+					Image(systemName: "square.and.arrow.up")
+				}
             }
             .buttonStyle(.borderedProminent)
             .disabled(state.isExporting)
