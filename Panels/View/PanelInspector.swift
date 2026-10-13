@@ -11,6 +11,7 @@ struct PanelInspector: View {
                 Divider()
                 if let address = editor.selection {
                     cellSettings(address, cell: design[address])
+                        .id(address)
                 } else {
                     ContentUnavailableView {
                         Label("Select a cell", systemImage: "square.dashed")
@@ -43,6 +44,12 @@ struct PanelInspector: View {
             }
             .pickerStyle(.segmented)
             .accessibilityIdentifier("panelSize")
+            Picker("Panel finish", selection: Binding(get: { design.finish }, set: editor.setFinish)) {
+                ForEach(PanelFinish.allCases) { finish in
+                    Text(finish.name).tag(finish)
+                }
+            }
+            .accessibilityIdentifier("panelFinish")
             HStack {
                 Text(design.size.dimensionLabel).foregroundStyle(.primary)
                 Spacer()

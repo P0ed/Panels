@@ -6,7 +6,7 @@ Open `Panels.xcodeproj` in Xcode and run the **Panels** scheme. Requires macOS 1
 
 Choose a **4 × 6** grid on a **4.25″ × 7″** panel or an **8 × 6** grid on an **8.5″ × 7″** panel. Control centers use 1″ spacing; the grid is centered horizontally with ½″ bands above and below it.
 
-Click a cell and choose its control in the inspector:
+Click a cell and choose its control in the left sidebar:
 
 - LEMO.1B.303 socket
 - 4 mm Pomona 1581 banana jack
@@ -16,6 +16,10 @@ Click a cell and choose its control in the inspector:
 - Bourns 51 potentiometer with a fluted knob
 
 Add an optional control name, choose colors where applicable, and choose a rectangle, diamond, arch, or peak frame. Frames can rotate. The module name appears at the top of the panel.
+
+Panel lettering uses the bundled **Futura Medium** font from `../3U-Serge`. Choose **ENIG** (gold), **Aluminum** (silver), or **Enamel** (cream) in the sidebar. The finish is saved with the design and used in both the preview and PNG export. Existing files without a finish keep Enamel.
+
+The four mounting holes are **3.2 mm** in diameter. Their centers are **9 mm** from the left/right edges and **6.5 mm** from the top/bottom edges.
 
 **File → New Example Panel** opens a populated example. A copy is also in `Examples/Serge Prototype.panel`.
 
@@ -56,7 +60,7 @@ swift test
 
 Clipboard tests use an in-memory adapter; the app uses the macOS clipboard. Native windows and save dialogs can be checked by running the app in Xcode.
 
-`Examples/Serge Prototype.png` is a 300 DPI export of the included sample. Regenerate the example image and app icons with:
+`Examples/Serge Prototype.png` is a 300 DPI Enamel export of the included sample; ENIG and Aluminum variants are alongside it. Regenerate the sample images and app icons with:
 
 ```sh
 swiftc Panels/Model/PanelDesign.swift Panels/Rendering/PanelRenderer.swift \

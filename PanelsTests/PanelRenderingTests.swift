@@ -1,9 +1,29 @@
 import CoreGraphics
+import CoreText
 import ImageIO
 import XCTest
 @testable import Panels
 
 final class PanelRenderingTests: XCTestCase {
+    func testPanelLetteringUsesBundledFuturaMedium() throws {
+        XCTAssertNotNil(PanelTypography.fontData)
+        let font = PanelTypography.font(size: 12)
+        XCTAssertEqual(CTFontCopyFullName(font) as String, "Futura Medium")
+    }
+
+    func testEachPanelFinishChangesPNGArtwork() throws {
+        var artworks: Set<Data> = []
+        for finish in PanelFinish.allCases {
+            var design = PanelDesign(title: "", finish: finish)
+            let address = CellAddress(row: 0, column: 0)
+            design[address].setControl(.pomona1581)
+            design[address].frame = .diamond
+            design[address].caption = "IN"
+            artworks.insert(try PNGExporter.data(design, resolution: .standard))
+        }
+        XCTAssertEqual(artworks.count, PanelFinish.allCases.count)
+    }
+
     func testBothSizesHaveCorrectPixelsAndDPIMetadata() throws {
         for size in PanelSize.allCases {
             var design = PanelDesign()

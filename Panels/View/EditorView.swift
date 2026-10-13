@@ -4,7 +4,6 @@ struct EditorView: View {
     @Binding var design: PanelDesign
     @StateObject private var editor: PanelEditor
     @Environment(\.undoManager) private var undoManager
-    @Environment(\.newDocument) private var newDocument
 
     init(design: Binding<PanelDesign>) {
         _design = design
@@ -12,15 +11,18 @@ struct EditorView: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
+        editor.updateDocumentBinding($design)
+        return NavigationSplitView {
+            PanelInspector(design: design, editor: editor)
+                .navigationSplitViewColumnWidth(min: 290, ideal: 310, max: 340)
+        } detail: {
             VStack(spacing: 0) {
                 PanelCanvas(design: design, editor: editor)
                 statusBar
             }
             .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
-            Divider()
-            PanelInspector(design: design, editor: editor)
         }
+        .navigationSplitViewStyle(.balanced)
         .frame(minWidth: 780, minHeight: 650)
         .focusedSceneValue(\.panelEditor, editor)
         .onAppear { editor.undoManager = undoManager }
@@ -60,17 +62,6 @@ struct EditorView: View {
 
     @ToolbarContentBuilder
     private var editorToolbar: some ToolbarContent {
-        ToolbarItem(placement: .navigation) {
-            Button("Example Panel", systemImage: "square.grid.3x3") {
-                do {
-                    let example = try PanelDocument.example()
-                    newDocument(example)
-                } catch {
-                    editor.exportError = error.localizedDescription
-                }
-            }
-            .help("Open the example in a new document")
-        }
         ToolbarItemGroup {
             Toggle(isOn: $editor.showGuides) {
                 Label("Cell Guides", systemImage: "square.dashed")

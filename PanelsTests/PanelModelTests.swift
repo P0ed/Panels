@@ -13,6 +13,29 @@ func exampleDesign() throws -> PanelDesign {
 }
 
 final class PanelModelTests: XCTestCase {
+    func testMountingHolesUseSpecifiedOffsetsAndDiameterForBothSizes() {
+        for size in PanelSize.allCases {
+            let holes = PanelGeometry(size: size).mountingHoles
+            XCTAssertEqual(holes.count, 4)
+            XCTAssertEqual(Set(holes.map(\.center.x)), [9_000, size.width - 9_000])
+            XCTAssertEqual(Set(holes.map(\.center.y)), [6_500, size.height - 6_500])
+            XCTAssertTrue(holes.allSatisfy { $0.diameter == 3_200 })
+        }
+    }
+
+    func testFinishesRoundTripAndLegacyDocumentsKeepEnamel() throws {
+        for finish in PanelFinish.allCases {
+            let design = PanelDesign(finish: finish)
+            XCTAssertEqual(try PanelDesign.decode(design.encoded()).finish, finish)
+        }
+        var legacy = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: PanelDesign(finish: .enig).encoded()
+        ) as? [String: Any])
+        legacy.removeValue(forKey: "finish")
+        let restored = try PanelDesign.decode(JSONSerialization.data(withJSONObject: legacy))
+        XCTAssertEqual(restored.finish, .enamel)
+    }
+
     func testPanelDimensionsAndCenteredOneInchGrid() {
         for size in PanelSize.allCases {
             let geometry = PanelGeometry(size: size)

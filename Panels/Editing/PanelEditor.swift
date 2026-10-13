@@ -44,6 +44,10 @@ final class PanelEditor: ObservableObject {
     var selectedCell: PanelCell? { selection.map { design[$0] } }
     var canPaste: Bool { clipboard.cellData != nil }
 
+    func updateDocumentBinding(_ binding: Binding<PanelDesign>) {
+        document = binding
+    }
+
     func change(_ name: String, _ mutation: (inout PanelDesign) -> Void) {
         var updated = design
         mutation(&updated)
@@ -75,6 +79,10 @@ final class PanelEditor: ObservableObject {
 
     func setTitle(_ title: String) {
         change("Change Module Name") { $0.title = title }
+    }
+
+    func setFinish(_ finish: PanelFinish) {
+        change("Change Panel Finish") { $0.finish = finish }
     }
 
     func editCell(_ name: String, _ mutation: (inout PanelCell) -> Void) {

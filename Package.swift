@@ -8,7 +8,8 @@ let package = Package(
         .target(
             name: "Panels",
             path: "Panels",
-            exclude: ["PanelsApp.swift", "View", "Assets.xcassets", "Info.plist"]
+            exclude: ["PanelsApp.swift", "View", "Assets.xcassets", "Info.plist"],
+            resources: [.copy("Resources")]
         ),
         .testTarget(name: "PanelsTests", dependencies: ["Panels"], path: "PanelsTests"),
     ]

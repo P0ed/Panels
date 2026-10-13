@@ -13,9 +13,13 @@ struct RenderAssets {
             try drawIcon(pixels: pixels, to: iconDirectory.appendingPathComponent("icon-\(pixels).png"))
         }
         let exampleURL = root.appendingPathComponent("Examples/Serge Prototype.panel")
-        let design = try PanelDesign.decode(Data(contentsOf: exampleURL))
-        try PNGExporter.write(design, resolution: .standard,
-                              to: root.appendingPathComponent("Examples/Serge Prototype.png"))
+        var design = try PanelDesign.decode(Data(contentsOf: exampleURL))
+        for finish in PanelFinish.allCases {
+            design.finish = finish
+            let filename = finish == .enamel ? "Serge Prototype.png" : "Serge Prototype \(finish.name).png"
+            try PNGExporter.write(design, resolution: .standard,
+                                  to: root.appendingPathComponent("Examples/\(filename)"))
+        }
     }
 
     private static func drawIcon(pixels: Int, to url: URL) throws {

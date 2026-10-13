@@ -34,8 +34,41 @@ extension PanelColor {
     }
 }
 
+extension PanelFinish {
+    var ink: PanelInk {
+        switch self {
+        case .enig: PanelInk(0xD9BC70)
+        case .aluminum: PanelInk(0xD4D7D8)
+        case .enamel: PanelInk(0xEBE5D9)
+        }
+    }
+}
+
+enum PanelTypography {
+    static let fontData: Data? = {
+#if SWIFT_PACKAGE
+        let url = Bundle.module.url(forResource: "FuturaMedium", withExtension: "otf",
+                                    subdirectory: "Resources")
+#else
+        let url: URL? = Bundle.main.url(forResource: "FuturaMedium", withExtension: "otf")
+            ?? URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+                .appendingPathComponent("Panels/Resources/FuturaMedium.otf")
+#endif
+        guard let url else { return nil }
+        return try? Data(contentsOf: url)
+    }()
+
+    static func font(size: Double) -> CTFont {
+        if let fontData, let provider = CGDataProvider(data: fontData as CFData),
+           let font = CGFont(provider) {
+            return CTFontCreateWithGraphicsFont(font, size, nil, nil)
+        }
+        return CTFontCreateWithName("Futura-Medium" as CFString, size, nil)
+    }
+}
+
 enum PanelRenderer {
-    static var paper: CGColor { PanelInk(0xEBE5D9).cgColor }
+    static var paper: CGColor { PanelFinish.enamel.ink.cgColor }
     static var ink: CGColor { PanelInk(0x262724).cgColor }
     static var frameInk: CGColor { PanelInk(0x858881).cgColor }
 
@@ -49,7 +82,8 @@ enum PanelRenderer {
         context.setShouldAntialias(true)
 
         let panel = CGRect(x: 0, y: 0, width: width, height: height)
-        context.setFillColor(paper)
+        let background = design.finish.ink.cgColor
+        context.setFillColor(background)
         context.fill(panel)
         context.setStrokeColor(ink)
         context.setLineWidth(0.18)
@@ -58,11 +92,11 @@ enum PanelRenderer {
         context.strokePath()
 
         context.setFillColor(PanelInk(0x5B6059).cgColor)
-        for x in [4.3, width - 4.3] {
-            for y in [4.3, height - 4.3] {
-                circle(in: context, center: CGPoint(x: x, y: y), radius: 1.05)
-                context.fillPath()
-            }
+        for hole in design.geometry.mountingHoles {
+            let center = CGPoint(x: Double(hole.center.x) / 1_000,
+                                 y: Double(design.size.height - hole.center.y) / 1_000)
+            circle(in: context, center: center, radius: Double(hole.diameter) / 2_000)
+            context.fillPath()
         }
 
         for address in design.geometry.addresses {
@@ -79,13 +113,13 @@ enum PanelRenderer {
                          rect: CGRect(x: rect.minX + 0.8, y: rect.minY + 21.1,
                                       width: rect.width - 1.6, height: 4.1),
                          fontSize: 2.45, minimumFontSize: 1.65, maxLines: 2,
-                         tracking: 0.035, knockout: true)
+                         tracking: 0.035, background: background)
             }
         }
         drawText(design.title, in: context,
-                 rect: CGRect(x: 9, y: 1.1, width: width - 18, height: 10.2),
+                 rect: CGRect(x: 13, y: 1.1, width: width - 26, height: 10.2),
                  fontSize: 3.65, minimumFontSize: 2.2, maxLines: 2,
-                 tracking: 0.17, knockout: false)
+                 tracking: 0.17, background: nil)
     }
 
     static func screenRect(_ rect: PhysicalRect, panelHeight: Int) -> CGRect {
@@ -287,7 +321,7 @@ enum PanelRenderer {
     private static func attributed(_ text: String, fontSize: Double, tracking: Double) -> NSAttributedString {
         NSAttributedString(string: text, attributes: [
             NSAttributedString.Key(kCTFontAttributeName as String):
-                CTFontCreateWithName("HelveticaNeue-Medium" as CFString, fontSize, nil),
+                PanelTypography.font(size: fontSize),
             NSAttributedString.Key(kCTForegroundColorAttributeName as String): ink,
             NSAttributedString.Key(kCTKernAttributeName as String): tracking,
         ])
@@ -309,7 +343,7 @@ enum PanelRenderer {
 
     private static func drawText(_ text: String, in context: CGContext, rect: CGRect,
                                  fontSize initialSize: Double, minimumFontSize: Double,
-                                 maxLines: Int, tracking: Double, knockout: Bool) {
+                                 maxLines: Int, tracking: Double, background: CGColor?) {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard !text.isEmpty else { return }
         var fontSize = initialSize
@@ -339,9 +373,9 @@ enum PanelRenderer {
         context.saveGState()
         defer { context.restoreGState() }
         context.clip(to: rect.insetBy(dx: -0.7, dy: -0.35))
-        if knockout {
+        if let background {
             let width = min(rect.width, widths.max() ?? 0)
-            context.setFillColor(paper)
+            context.setFillColor(background)
             context.fill(CGRect(x: rect.midX - width / 2 - 0.7, y: startY - 0.25,
                                 width: width + 1.4, height: blockHeight + 0.5))
         }

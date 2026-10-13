@@ -70,6 +70,19 @@ enum PanelColor: String, Codable, CaseIterable, Identifiable, Sendable {
     var name: String { rawValue.capitalized }
 }
 
+enum PanelFinish: String, Codable, CaseIterable, Identifiable, Sendable {
+    case enig, aluminum, enamel
+
+    var id: Self { self }
+    var name: String {
+        switch self {
+        case .enig: "ENIG"
+        case .aluminum: "Aluminum"
+        case .enamel: "Enamel"
+        }
+    }
+}
+
 enum FramePreset: String, Codable, CaseIterable, Identifiable, Sendable {
     case none, rectangle, diamond, arch, peak
 
@@ -114,12 +127,25 @@ struct PhysicalRect: Equatable, Sendable {
     }
 }
 
+struct MountingHole: Equatable, Sendable {
+    var center: PhysicalPoint
+    var diameter: Int
+}
+
 struct PanelGeometry: Sendable {
     static let pitch = 25_400
     static let verticalInset = 12_700
 
     var size: PanelSize
     var horizontalInset: Int { (size.width - size.columns * Self.pitch) / 2 }
+
+    var mountingHoles: [MountingHole] {
+        [9_000, size.width - 9_000].flatMap { x in
+            [6_500, size.height - 6_500].map { y in
+                MountingHole(center: PhysicalPoint(x: x, y: y), diameter: 3_200)
+            }
+        }
+    }
 
     var addresses: [CellAddress] {
         (0..<size.rows).flatMap { row in
@@ -181,6 +207,7 @@ struct PanelDesign: Equatable, Codable, Sendable {
     var version = 1
     var size: PanelSize = .fourBySix
     var title = "UNTITLED MODULE"
+    var finish: PanelFinish = .enamel
     var cells = Array(repeating: PanelCell(), count: 48)
 
     var geometry: PanelGeometry { PanelGeometry(size: size) }
@@ -220,6 +247,23 @@ struct PanelDesign: Equatable, Codable, Sendable {
         } catch {
             throw PanelError.invalidDocument("The file is not a valid Panels document.")
         }
+    }
+}
+
+extension PanelDesign {
+    private enum CodingKeys: String, CodingKey {
+        case version, size, title, finish, cells
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            version: try values.decode(Int.self, forKey: .version),
+            size: try values.decode(PanelSize.self, forKey: .size),
+            title: try values.decode(String.self, forKey: .title),
+            finish: try values.decodeIfPresent(PanelFinish.self, forKey: .finish) ?? .enamel,
+            cells: try values.decode([PanelCell].self, forKey: .cells)
+        )
     }
 }
 
