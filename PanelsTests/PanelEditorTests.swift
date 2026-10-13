@@ -6,8 +6,34 @@ import XCTest
 @MainActor
 private final class DesignHolder {
     var design = PanelDesign()
+    var state = PanelEditorState()
+    let clipboard = MemoryCellClipboard()
+    let undo = UndoManager()
+    private(set) var documentWrites = 0
+    private(set) var stateWrites = 0
+
+    init() { undo.groupsByEvent = false }
+
     var binding: Binding<PanelDesign> {
-        Binding(get: { self.design }, set: { self.design = $0 })
+        Binding(get: { self.design }, set: { self.replace($0) })
+    }
+
+    var stateBinding: Binding<PanelEditorState> {
+        Binding(get: { self.state }, set: { self.stateWrites += 1; self.state = $0 })
+    }
+
+    var editor: PanelEditor {
+        PanelEditor(design: binding, state: stateBinding, undoManager: undo, clipboard: clipboard)
+    }
+
+    private func replace(_ next: PanelDesign) {
+        let previous = design
+        guard next != previous else { return }
+        undo.registerUndo(withTarget: self) { holder in
+            MainActor.assumeIsolated { holder.replace(previous) }
+        }
+        design = next
+        documentWrites += 1
     }
 }
 
@@ -18,12 +44,61 @@ private final class MemoryCellClipboard: CellClipboard {
 
 final class PanelEditorTests: XCTestCase {
     @MainActor
-    func testRefreshedDocumentBindingShowsSelectedCellsStoredValues() async {
+    func testInspectorEditChangesOnlyDocumentAndUsesDocumentUndo() async {
+        let holder = DesignHolder()
+        let editor = holder.editor
+        let undo = holder.undo
+        let title = editor.panelBinding(\.title, actionName: "Change Module Name")
+        title.wrappedValue = "NEW NAME"
+        XCTAssertEqual(holder.design.title, "NEW NAME")
+        XCTAssertEqual(holder.documentWrites, 1)
+        XCTAssertEqual(holder.stateWrites, 0)
+        XCTAssertEqual(undo.undoActionName, "Change Module Name")
+        undo.undo()
+        XCTAssertEqual(holder.design.title, "UNTITLED MODULE")
+        XCTAssertFalse(undo.canUndo)
+        undo.redo()
+        XCTAssertEqual(holder.design.title, "NEW NAME")
+    }
+
+    @MainActor
+    func testInspectorRefreshEchoDoesNotCommitAnEdit() async {
+        let holder = DesignHolder()
+        let editor = holder.editor
+        let undo = holder.undo
+        let frame = editor.cellBinding(\.frame, actionName: "Frame")
+        frame.wrappedValue = .none
+        XCTAssertEqual(holder.design, PanelDesign())
+        XCTAssertEqual(holder.documentWrites, 0)
+        XCTAssertEqual(holder.stateWrites, 0)
+        XCTAssertFalse(undo.canUndo)
+    }
+
+    @MainActor
+    func testConsecutiveInspectorEditsPreserveFieldsAndOriginalCell() async {
+        let holder = DesignHolder()
+        let editor = holder.editor
+        let source = CellAddress(row: 0, column: 0)
+        let target = CellAddress(row: 0, column: 1)
+        let caption = editor.cellBinding(\.caption, actionName: "Name")
+        let frame = editor.cellBinding(\.frame, actionName: "Frame")
+        caption.wrappedValue = "FIRST"
+        caption.wrappedValue = ""
+        caption.wrappedValue = "LAST"
+        frame.wrappedValue = .diamond
+        editor.state.selection = target
+        XCTAssertEqual(holder.design[source].caption, "LAST")
+        XCTAssertEqual(holder.design[source].frame, .diamond)
+        XCTAssertEqual(holder.design[target], PanelCell())
+    }
+
+    @MainActor
+    func testCurrentDocumentBindingShowsSelectedCellsStoredValues() async {
         let holder = DesignHolder()
         let initialSnapshot = holder.design
-        let editor = PanelEditor(design: Binding(
+        let initialEditor = PanelEditor(design: Binding(
             get: { initialSnapshot }, set: { holder.design = $0 }
-        ))
+        ), state: holder.stateBinding, undoManager: nil, clipboard: holder.clipboard)
         let toggle = CellAddress(row: 2, column: 3)
         holder.design[toggle].setControl(.nkkMN12)
         holder.design[toggle].caption = "MODE"
@@ -35,13 +110,14 @@ final class PanelEditorTests: XCTestCase {
         holder.design[pot].caption = "RATE"
         holder.design[pot].frame = .arch
         holder.design[pot].knobAngle = -65
-        editor.updateDocumentBinding(holder.binding)
-        editor.selection = toggle
+        XCTAssertEqual(initialEditor.selectedCell, PanelCell())
+        let editor = holder.editor
+        editor.state.selection = toggle
         XCTAssertEqual(editor.cellBinding(\.caption, actionName: "Name").wrappedValue, "MODE")
         XCTAssertEqual(editor.cellBinding(\.frame, actionName: "Frame").wrappedValue, .diamond)
         XCTAssertEqual(editor.cellBinding(\.frameRotation, actionName: "Rotate").wrappedValue, .two)
         XCTAssertEqual(editor.cellBinding(\.togglePosition, actionName: "Lever").wrappedValue, .down)
-        editor.selection = pot
+        editor.state.selection = pot
         XCTAssertEqual(editor.cellBinding(\.caption, actionName: "Name").wrappedValue, "RATE")
         XCTAssertEqual(editor.cellBinding(\.frame, actionName: "Frame").wrappedValue, .arch)
         XCTAssertEqual(editor.cellBinding(\.knobAngle, actionName: "Pointer").wrappedValue, -65)
@@ -53,10 +129,8 @@ final class PanelEditorTests: XCTestCase {
     @MainActor
     func testPanelFinishChangesAreUndoable() async {
         let holder = DesignHolder()
-        let editor = PanelEditor(design: holder.binding)
-        let undo = UndoManager()
-        undo.groupsByEvent = false
-        editor.undoManager = undo
+        let editor = holder.editor
+        let undo = holder.undo
         editor.setFinish(.enig)
         XCTAssertEqual(holder.design.finish, .enig)
         undo.undo()
@@ -68,18 +142,16 @@ final class PanelEditorTests: XCTestCase {
     @MainActor
     func testResizeRetainsCellsAndSupportsUndoRedo() async {
         let holder = DesignHolder()
-        let editor = PanelEditor(design: holder.binding)
-        let undo = UndoManager()
-        undo.groupsByEvent = false
-        editor.undoManager = undo
+        let editor = holder.editor
+        let undo = holder.undo
         editor.setSize(.eightBySix)
         let address = CellAddress(row: 3, column: 7)
-        editor.selection = address
+        editor.state.selection = address
         editor.setControl(.lemo1B303)
         editor.cellBinding(\.caption, actionName: "Name Control").wrappedValue = "BAL. OUT"
         editor.setSize(.fourBySix)
         XCTAssertEqual(holder.design[address].caption, "BAL. OUT")
-        XCTAssertEqual(editor.selection, CellAddress(row: 3, column: 3))
+        XCTAssertEqual(editor.state.selection, CellAddress(row: 3, column: 3))
         XCTAssertEqual(holder.design.visibleControlCount, 0)
         undo.undo()
         XCTAssertEqual(holder.design.size, .eightBySix)
@@ -94,14 +166,12 @@ final class PanelEditorTests: XCTestCase {
     @MainActor
     func testCellCopyPasteAndClearAreUndoable() async {
         let holder = DesignHolder()
-        let clipboard = MemoryCellClipboard()
-        let editor = PanelEditor(design: holder.binding, clipboard: clipboard)
-        let undo = UndoManager()
-        undo.groupsByEvent = false
-        editor.undoManager = undo
+        let clipboard = holder.clipboard
+        let editor = holder.editor
+        let undo = holder.undo
         let source = CellAddress(row: 0, column: 0)
         let target = CellAddress(row: 5, column: 3)
-        editor.selection = source
+        editor.state.selection = source
         editor.setControl(.pomona1581)
         editor.editCell("Style Cell") {
             $0.color = .red
@@ -110,7 +180,7 @@ final class PanelEditorTests: XCTestCase {
         }
         editor.copyCell()
         XCTAssertNotNil(clipboard.cellData)
-        editor.selection = target
+        editor.state.selection = target
         editor.pasteCell()
         XCTAssertEqual(holder.design[target], holder.design[source])
         editor.clearCell()
@@ -126,7 +196,7 @@ final class PanelEditorTests: XCTestCase {
     @MainActor
     func testTypeChangePreservesLabelAndFrameAndUpdatesDefaultColor() async {
         let holder = DesignHolder()
-        let editor = PanelEditor(design: holder.binding)
+        let editor = holder.editor
         editor.editCell("Style") {
             $0.caption = "GATE"
             $0.frame = .peak
@@ -145,10 +215,8 @@ final class PanelEditorTests: XCTestCase {
     @MainActor
     func testTitleUndoAndNoOpEdits() async {
         let holder = DesignHolder()
-        let editor = PanelEditor(design: holder.binding)
-        let undo = UndoManager()
-        undo.groupsByEvent = false
-        editor.undoManager = undo
+        let editor = holder.editor
+        let undo = holder.undo
         editor.setTitle(holder.design.title)
         XCTAssertFalse(undo.canUndo)
         editor.setTitle("POSITIVE SLEW")
@@ -161,11 +229,11 @@ final class PanelEditorTests: XCTestCase {
     @MainActor
     func testCaptionBindingKeepsItsOriginalCellWhenSelectionChanges() async {
         let holder = DesignHolder()
-        let editor = PanelEditor(design: holder.binding)
+        let editor = holder.editor
         let source = CellAddress(row: 0, column: 0)
         let target = CellAddress(row: 0, column: 1)
         let caption = editor.cellBinding(\.caption, actionName: "Change Control Name")
-        editor.selection = target
+        editor.state.selection = target
         caption.wrappedValue = "FINISH EDIT"
         XCTAssertEqual(holder.design[source].caption, "FINISH EDIT")
         XCTAssertEqual(holder.design[target].caption, "")
@@ -174,8 +242,8 @@ final class PanelEditorTests: XCTestCase {
     @MainActor
     func testInvalidClipboardDataDoesNotModifyThePanel() async {
         let holder = DesignHolder()
-        let clipboard = MemoryCellClipboard()
-        let editor = PanelEditor(design: holder.binding, clipboard: clipboard)
+        let clipboard = holder.clipboard
+        let editor = holder.editor
         let initial = holder.design
         clipboard.cellData = Data("not a cell".utf8)
         editor.pasteCell()
@@ -189,18 +257,18 @@ final class PanelEditorTests: XCTestCase {
     @MainActor
     func testZoomStartsAtTheFittedScaleAndStaysBounded() async {
         let holder = DesignHolder()
-        let editor = PanelEditor(design: holder.binding)
-        editor.fitZoom = 1.5
+        let editor = holder.editor
+        editor.state.fitZoom = 1.5
         editor.zoomIn()
-        XCTAssertEqual(editor.zoom, 1.75)
-        editor.zoom = nil
+        XCTAssertEqual(editor.state.zoom, 1.75)
+        editor.state.zoom = nil
         editor.zoomOut()
-        XCTAssertEqual(editor.zoom, 1.25)
-        editor.zoom = 4
+        XCTAssertEqual(editor.state.zoom, 1.25)
+        editor.state.zoom = 4
         editor.zoomIn()
-        XCTAssertEqual(editor.zoom, 4)
-        editor.zoom = 0.25
+        XCTAssertEqual(editor.state.zoom, 4)
+        editor.state.zoom = 0.25
         editor.zoomOut()
-        XCTAssertEqual(editor.zoom, 0.25)
+        XCTAssertEqual(editor.state.zoom, 0.25)
     }
 }

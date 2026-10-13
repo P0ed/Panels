@@ -23,7 +23,7 @@ struct PanelCommands: Commands {
         CommandGroup(after: .importExport) {
             Button("Export PNG…") { editor?.exportPNG() }
                 .keyboardShortcut("e", modifiers: [.command, .shift])
-                .disabled(editor == nil || editor?.isExporting == true)
+                .disabled(editor == nil || editor?.state.isExporting == true)
         }
         CommandGroup(replacing: .pasteboard) {
             Button("Cut") { perform(#selector(NSText.cut(_:))) { $0.cutCell() } }
@@ -34,7 +34,7 @@ struct PanelCommands: Commands {
                 .disabled(!canCopy)
             Button("Paste") { perform(#selector(NSText.paste(_:))) { $0.pasteCell() } }
                 .keyboardShortcut("v")
-                .disabled(!isEditingText && (editor?.selection == nil || editor?.canPaste != true))
+                .disabled(!isEditingText && (editor?.state.selection == nil || editor?.canPaste != true))
         }
         CommandMenu("Panel") {
             Button("Clear Cell") { editor?.clearCell() }
@@ -47,12 +47,12 @@ struct PanelCommands: Commands {
             Divider()
             Button("Zoom In") { editor?.zoomIn() }.keyboardShortcut("+").disabled(editor == nil)
             Button("Zoom Out") { editor?.zoomOut() }.keyboardShortcut("-").disabled(editor == nil)
-            Button("Fit Panel") { editor?.zoom = nil }
+            Button("Fit Panel") { editor?.state.zoom = nil }
                 .keyboardShortcut("0")
                 .disabled(editor == nil)
             Toggle("Cell Guides", isOn: Binding(
-                get: { editor?.showGuides ?? true },
-                set: { editor?.showGuides = $0 }
+                get: { editor?.state.showGuides ?? true },
+                set: { editor?.state.showGuides = $0 }
             ))
             .keyboardShortcut("g")
             .disabled(editor == nil)
@@ -60,7 +60,7 @@ struct PanelCommands: Commands {
     }
 
     private var isEditingText: Bool { NSApp.keyWindow?.firstResponder is NSTextView }
-    private var canCopy: Bool { isEditingText || editor?.selection != nil }
+    private var canCopy: Bool { isEditingText || editor?.state.selection != nil }
 
     private func perform(_ selector: Selector, cellAction: (PanelEditor) -> Void) {
         if isEditingText {

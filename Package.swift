@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "Panels",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS("27.0")],
     targets: [
         .target(
             name: "Panels",

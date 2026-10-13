@@ -1,15 +1,16 @@
 import SwiftUI
 
 struct PanelInspector: View {
-    var design: PanelDesign
-    @ObservedObject var editor: PanelEditor
+    @Binding var design: PanelDesign
+    @Binding var state: PanelEditorState
+    var editor: PanelEditor
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 panelSettings
                 Divider()
-                if let address = editor.selection {
+                if let address = state.selection {
                     cellSettings(address, cell: design[address])
                         .id(address)
                 } else {
@@ -32,19 +33,22 @@ struct PanelInspector: View {
             sectionTitle("PANEL")
             VStack(alignment: .leading, spacing: 6) {
                 Text("Module name").font(.subheadline).foregroundStyle(.secondary)
-                TextField("Module name", text: Binding(get: { design.title }, set: editor.setTitle), axis: .vertical)
+                TextField("Module name", text: editor.panelBinding(\.title,
+                          actionName: "Change Module Name"), axis: .vertical)
                     .textFieldStyle(.roundedBorder)
                     .lineLimit(1...3)
                     .accessibilityIdentifier("moduleTitle")
             }
-            Picker("Grid size", selection: Binding(get: { design.size }, set: editor.setSize)) {
+            Picker("Grid size", selection: editor.panelBinding(\.size,
+                   actionName: "Change Panel Size")) {
                 ForEach(PanelSize.allCases) { size in
                     Text(size.gridLabel).tag(size)
                 }
             }
             .pickerStyle(.segmented)
             .accessibilityIdentifier("panelSize")
-            Picker("Panel finish", selection: Binding(get: { design.finish }, set: editor.setFinish)) {
+            Picker("Panel finish", selection: editor.panelBinding(\.finish,
+                   actionName: "Change Panel Finish")) {
                 ForEach(PanelFinish.allCases) { finish in
                     Text(finish.name).tag(finish)
                 }
@@ -106,14 +110,16 @@ struct PanelInspector: View {
             }
             VStack(alignment: .leading, spacing: 6) {
                 Text("Control name").font(.subheadline).foregroundStyle(.secondary)
-                TextField("Optional", text: editor.cellBinding(\.caption, actionName: "Change Control Name"),
+                TextField("Optional", text: editor.cellBinding(\.caption,
+                          actionName: "Change Control Name"),
                           axis: .vertical)
                     .textFieldStyle(.roundedBorder)
                     .lineLimit(1...3)
                     .accessibilityIdentifier("controlCaption")
             }
             if let control = cell.control, !control.colors.isEmpty {
-                Picker("Color", selection: editor.cellBinding(\.color, actionName: "Change Control Color")) {
+                Picker("Color", selection: editor.cellBinding(\.color,
+                       actionName: "Change Control Color")) {
                     ForEach(control.colors) { color in
                         Label {
                             Text(color.name)
@@ -138,7 +144,8 @@ struct PanelInspector: View {
                 .font(.subheadline)
             }
             if cell.control == .nkkMN12 {
-                Picker("Lever", selection: editor.cellBinding(\.togglePosition, actionName: "Change Toggle Position")) {
+                Picker("Lever", selection: editor.cellBinding(\.togglePosition,
+                       actionName: "Change Toggle Position")) {
                     ForEach(TogglePosition.allCases) { position in
                         Text(position.name).tag(position)
                     }
@@ -152,7 +159,8 @@ struct PanelInspector: View {
                 }
             }
             if cell.frame != .none, cell.frame != .rectangle {
-                Picker("Rotation", selection: editor.cellBinding(\.frameRotation, actionName: "Rotate Frame")) {
+                Picker("Rotation", selection: editor.cellBinding(\.frameRotation,
+                       actionName: "Rotate Frame")) {
                     ForEach(QuarterTurn.allCases) { rotation in
                         Text("\(rotation.degrees)°").tag(rotation)
                     }

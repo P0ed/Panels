@@ -2,22 +2,20 @@ import SwiftUI
 
 struct EditorView: View {
     @Binding var design: PanelDesign
-    @StateObject private var editor: PanelEditor
+    @State private var state = PanelEditorState()
     @Environment(\.undoManager) private var undoManager
 
-    init(design: Binding<PanelDesign>) {
-        _design = design
-        _editor = StateObject(wrappedValue: PanelEditor(design: design))
+    private var editor: PanelEditor {
+        PanelEditor(design: $design, state: $state, undoManager: undoManager)
     }
 
     var body: some View {
-        editor.updateDocumentBinding($design)
-        return NavigationSplitView {
-            PanelInspector(design: design, editor: editor)
+        NavigationSplitView {
+            PanelInspector(design: $design, state: $state, editor: editor)
                 .navigationSplitViewColumnWidth(min: 290, ideal: 310, max: 340)
         } detail: {
             VStack(spacing: 0) {
-                PanelCanvas(design: design, editor: editor)
+                PanelCanvas(design: design, state: $state, editor: editor)
                 statusBar
             }
             .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
@@ -25,16 +23,15 @@ struct EditorView: View {
         .navigationSplitViewStyle(.balanced)
         .frame(minWidth: 780, minHeight: 650)
         .focusedSceneValue(\.panelEditor, editor)
-        .onAppear { editor.undoManager = undoManager }
-        .onChange(of: undoManager) { _, manager in editor.undoManager = manager }
+        .onChange(of: design.size) { _, size in state.constrainSelection(to: size) }
         .toolbar { editorToolbar }
         .alert("Panels", isPresented: Binding(
-            get: { editor.exportError != nil },
-            set: { if !$0 { editor.exportError = nil } }
+            get: { state.exportError != nil },
+            set: { if !$0 { state.exportError = nil } }
         )) {
-            Button("OK", role: .cancel) { editor.exportError = nil }
+            Button("OK", role: .cancel) { state.exportError = nil }
         } message: {
-            Text(editor.exportError ?? "")
+            Text(state.exportError ?? "")
         }
     }
 
@@ -46,7 +43,7 @@ struct EditorView: View {
             Text("·").foregroundStyle(.tertiary)
             Text(design.size.dimensionLabel)
             Spacer()
-            if let selection = editor.selection {
+            if let selection = state.selection {
                 Text(selection.label).foregroundStyle(.secondary)
             }
             Text("·").foregroundStyle(.tertiary)
@@ -63,20 +60,20 @@ struct EditorView: View {
     @ToolbarContentBuilder
     private var editorToolbar: some ToolbarContent {
         ToolbarItemGroup {
-            Toggle(isOn: $editor.showGuides) {
+            Toggle(isOn: $state.showGuides) {
                 Label("Cell Guides", systemImage: "square.dashed")
             }
             .toggleStyle(.button)
             .help("Show cell guides")
 
             Menu {
-                Button("Fit Panel") { editor.zoom = nil }
+                Button("Fit Panel") { state.zoom = nil }
                 Divider()
                 ForEach([0.5, 0.75, 1, 1.5, 2, 3, 4], id: \.self) { zoom in
-                    Button("\(Int(zoom * 100))%") { editor.zoom = zoom }
+                    Button("\(Int(zoom * 100))%") { state.zoom = zoom }
                 }
             } label: {
-                Text(editor.zoom.map { "\(Int($0 * 100))%" } ?? "Fit")
+                Text(state.zoom.map { "\(Int($0 * 100))%" } ?? "Fit")
                     .monospacedDigit()
                     .frame(minWidth: 34)
             }
@@ -84,18 +81,18 @@ struct EditorView: View {
         }
         ToolbarItemGroup(placement: .primaryAction) {
             Menu {
-                Picker("Image Resolution", selection: $editor.exportResolution) {
+                Picker("Image Resolution", selection: $state.exportResolution) {
                     ForEach(ExportResolution.allCases) { resolution in
                         Text(resolution.label).tag(resolution)
                     }
                 }
             } label: {
-                Text(editor.exportResolution.label).font(.subheadline).monospacedDigit()
+                Text(state.exportResolution.label).font(.subheadline).monospacedDigit()
             }
             .help("PNG export resolution")
             Button(action: editor.exportPNG) {
                 HStack(spacing: 6) {
-                    if editor.isExporting {
+                    if state.isExporting {
                         ProgressView().controlSize(.small)
                     } else {
                         Image(systemName: "square.and.arrow.up")
@@ -104,7 +101,7 @@ struct EditorView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
-            .disabled(editor.isExporting)
+            .disabled(state.isExporting)
             .help("Export the panel artwork as a PNG image")
         }
     }

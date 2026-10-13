@@ -2,7 +2,7 @@
 
 A native SwiftUI editor for Serge synthesizer panel prototypes, inspired by paperface panels.
 
-Open `Panels.xcodeproj` in Xcode and run the **Panels** scheme. Requires macOS 14 or later.
+Open `Panels.xcodeproj` in Xcode 27 and run the **Panels** scheme. Requires macOS 27 or later.
 
 Choose a **4 × 6** grid on a **4.25″ × 7″** panel or an **8 × 6** grid on an **8.5″ × 7″** panel. Control centers use 1″ spacing; the grid is centered horizontally with ½″ bands above and below it.
 

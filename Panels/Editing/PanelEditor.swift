@@ -20,57 +20,52 @@ final class SystemCellClipboard: CellClipboard {
     }
 }
 
+struct PanelEditorState: Equatable, Sendable {
+    var selection: CellAddress? = CellAddress(row: 0, column: 0)
+    var hovered: CellAddress?
+    var zoom: Double?
+    var fitZoom = 1.0
+    var showGuides = true
+    var exportResolution: ExportResolution = .standard
+    var exportError: String?
+    var isExporting = false
+    var clipboardRevision = 0
+
+    mutating func constrainSelection(to size: PanelSize) {
+        if let selection, selection.column >= size.columns {
+            self.selection = CellAddress(row: selection.row, column: size.columns - 1)
+        }
+        if let hovered, hovered.column >= size.columns {
+            self.hovered = nil
+        }
+    }
+}
+
 @MainActor
-final class PanelEditor: ObservableObject {
-    @Published var selection: CellAddress? = CellAddress(row: 0, column: 0)
-    @Published var hovered: CellAddress?
-    @Published var zoom: Double?
-    @Published var fitZoom = 1.0
-    @Published var showGuides = true
-    @Published var exportResolution: ExportResolution = .standard
-    @Published var exportError: String?
-    @Published private(set) var isExporting = false
+struct PanelEditor {
+    @Binding var design: PanelDesign
+    @Binding var state: PanelEditorState
+    var undoManager: UndoManager?
+    var clipboard: any CellClipboard = SystemCellClipboard()
 
-    private var document: Binding<PanelDesign>
-    private let clipboard: any CellClipboard
-    weak var undoManager: UndoManager?
-
-    init(design: Binding<PanelDesign>, clipboard: any CellClipboard = SystemCellClipboard()) {
-        document = design
-        self.clipboard = clipboard
-    }
-
-    var design: PanelDesign { document.wrappedValue }
-    var selectedCell: PanelCell? { selection.map { design[$0] } }
+    var selectedCell: PanelCell? { state.selection.map { design[$0] } }
     var canPaste: Bool { clipboard.cellData != nil }
-
-    func updateDocumentBinding(_ binding: Binding<PanelDesign>) {
-        document = binding
-    }
 
     func change(_ name: String, _ mutation: (inout PanelDesign) -> Void) {
         var updated = design
         mutation(&updated)
         guard updated != design else { return }
-        restore(updated, actionName: name)
-    }
-
-    private func restore(_ updated: PanelDesign, actionName: String) {
-        let previous = design
-        if let undoManager {
-            let needsGroup = undoManager.groupingLevel == 0 && !undoManager.isUndoing && !undoManager.isRedoing
-            if needsGroup { undoManager.beginUndoGrouping() }
-            undoManager.registerUndo(withTarget: self) { editor in
-                MainActor.assumeIsolated { editor.restore(previous, actionName: actionName) }
-            }
-            undoManager.setActionName(actionName)
-            if needsGroup { undoManager.endUndoGrouping() }
+        let needsGroup = undoManager.map {
+            $0.groupingLevel == 0 && !$0.isUndoing && !$0.isRedoing
+        } ?? false
+        if needsGroup { undoManager?.beginUndoGrouping() }
+        defer { if needsGroup { undoManager?.endUndoGrouping() } }
+        design = updated
+        undoManager?.setActionName(name)
+        if state.selection.map({ !updated.geometry.contains($0) }) == true
+            || state.hovered.map({ !updated.geometry.contains($0) }) == true {
+            state.constrainSelection(to: updated.size)
         }
-        document.wrappedValue = updated
-        if let selection, !updated.geometry.contains(selection) {
-            self.selection = CellAddress(row: selection.row, column: updated.size.columns - 1)
-        }
-        objectWillChange.send()
     }
 
     func setSize(_ size: PanelSize) {
@@ -86,20 +81,26 @@ final class PanelEditor: ObservableObject {
     }
 
     func editCell(_ name: String, _ mutation: (inout PanelCell) -> Void) {
-        guard let selection else { return }
+        guard let selection = state.selection else { return }
         change(name) { mutation(&$0[selection]) }
     }
 
-    func cellBinding<Value>(_ keyPath: WritableKeyPath<PanelCell, Value>, actionName: String) -> Binding<Value> {
-        let address = selection
+    func panelBinding<Value: Equatable>(_ keyPath: WritableKeyPath<PanelDesign, Value>,
+                                        actionName: String) -> Binding<Value> {
+        Binding(
+            get: { design[keyPath: keyPath] },
+            set: { value in change(actionName) { $0[keyPath: keyPath] = value } }
+        )
+    }
+
+    func cellBinding<Value: Equatable>(_ keyPath: WritableKeyPath<PanelCell, Value>,
+                                       actionName: String) -> Binding<Value> {
+        let address = state.selection
         return Binding(
-            get: {
-                let cell = address.map { self.design[$0] } ?? PanelCell()
-                return cell[keyPath: keyPath]
-            },
+            get: { address.map { design[$0][keyPath: keyPath] } ?? PanelCell()[keyPath: keyPath] },
             set: { value in
                 guard let address else { return }
-                self.change(actionName) { $0[address][keyPath: keyPath] = value }
+                change(actionName) { $0[address][keyPath: keyPath] = value }
             }
         )
     }
@@ -115,11 +116,11 @@ final class PanelEditor: ObservableObject {
     func copyCell() {
         guard let selectedCell, let data = try? JSONEncoder().encode(selectedCell) else { return }
         clipboard.cellData = data
-        objectWillChange.send()
+        state.clipboardRevision += 1
     }
 
     func pasteCell() {
-        guard selection != nil,
+        guard state.selection != nil,
               let data = clipboard.cellData,
               let cell = try? JSONDecoder().decode(PanelCell.self, from: data),
               (try? cell.validate()) != nil else { return }
@@ -132,7 +133,7 @@ final class PanelEditor: ObservableObject {
     }
 
     func moveSelection(_ direction: MoveCommandDirection) {
-        var address = selection ?? CellAddress(row: 0, column: 0)
+        var address = state.selection ?? CellAddress(row: 0, column: 0)
         switch direction {
         case .left: address.column = max(0, address.column - 1)
         case .right: address.column = min(design.size.columns - 1, address.column + 1)
@@ -140,11 +141,11 @@ final class PanelEditor: ObservableObject {
         case .down: address.row = min(5, address.row + 1)
         @unknown default: break
         }
-        selection = address
+        state.selection = address
     }
 
-    func zoomIn() { zoom = min(4, (zoom ?? fitZoom) + 0.25) }
-    func zoomOut() { zoom = max(0.25, (zoom ?? fitZoom) - 0.25) }
+    func zoomIn() { state.zoom = min(4, (state.zoom ?? state.fitZoom) + 0.25) }
+    func zoomOut() { state.zoom = max(0.25, (state.zoom ?? state.fitZoom) - 0.25) }
 
     func exportPNG() {
         let panel = NSSavePanel()
@@ -157,18 +158,18 @@ final class PanelEditor: ObservableObject {
             .replacingOccurrences(of: "/", with: "-")
             .replacingOccurrences(of: ":", with: "-")
         panel.nameFieldStringValue = "\(stem).png"
-        let pixels = exportResolution.pixels(for: design.size)
-        panel.message = "\(pixels.width) × \(pixels.height) pixels · \(exportResolution.label)"
-        panel.begin { [weak self] response in
+        let pixels = state.exportResolution.pixels(for: design.size)
+        panel.message = "\(pixels.width) × \(pixels.height) pixels · \(state.exportResolution.label)"
+        panel.begin { response in
             guard response == .OK, let url = panel.url else { return }
-            MainActor.assumeIsolated { self?.writePNG(to: url) }
+            Task { @MainActor in writePNG(to: url) }
         }
     }
 
     private func writePNG(to url: URL) {
         let snapshot = design
-        let resolution = exportResolution
-        isExporting = true
+        let resolution = state.exportResolution
+        state.isExporting = true
         Task {
             do {
                 try await Task.detached(priority: .userInitiated) {
@@ -177,9 +178,9 @@ final class PanelEditor: ObservableObject {
                     try PNGExporter.write(snapshot, resolution: resolution, to: url)
                 }.value
             } catch {
-                exportError = error.localizedDescription
+                state.exportError = error.localizedDescription
             }
-            isExporting = false
+            state.isExporting = false
         }
     }
 }
