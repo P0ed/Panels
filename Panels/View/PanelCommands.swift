@@ -37,12 +37,29 @@ struct PanelCommands: Commands {
                 .disabled(!isEditingText && (editor?.state.selection == nil || editor?.canPaste != true))
         }
         CommandMenu("Panel") {
-            Button("Clear Cell") { editor?.clearCell() }
-                .disabled(editor?.selectedCell?.hasContent != true || isEditingText)
-            Divider()
             Button("4 × 6 Cells") { editor?.setSize(.fourBySix) }.disabled(editor == nil)
             Button("8 × 6 Cells") { editor?.setSize(.eightBySix) }.disabled(editor == nil)
         }
+		CommandMenu("Cell") {
+			Button("Clear Cell") { editor?.clearCell() }
+				.disabled(editor?.selectedCell?.hasContent != true || isEditingText)
+
+			Menu("Shape") {
+				ForEach(FramePreset.allCases) { preset in
+					Button(preset.name) {
+						editor?.cellBinding(\.frame, actionName: "Change Frame").wrappedValue = preset
+					}
+					.keyboardShortcut(preset.shortcut, modifiers: .control)
+				}
+			}
+			.disabled(editor?.selectedCell == nil)
+
+			Button("Rotate") {
+				let binding = editor?.cellBinding(\.frameRotation, actionName: "Change Rotation")
+				binding?.wrappedValue = binding?.wrappedValue.clockwise ?? .zero
+			}
+			.keyboardShortcut("r", modifiers: .control)
+		}
         CommandGroup(after: .toolbar) {
             Divider()
             Button("Zoom In") { editor?.zoomIn() }.keyboardShortcut("+").disabled(editor == nil)

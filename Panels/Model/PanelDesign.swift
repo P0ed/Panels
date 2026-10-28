@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum PanelSize: String, Codable, CaseIterable, Identifiable, Sendable {
     case fourBySix
@@ -88,6 +89,15 @@ enum FramePreset: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var id: Self { self }
     var name: String { rawValue.capitalized }
+	var shortcut: KeyEquivalent {
+		switch self {
+		case .rectangle: "s"
+		case .diamond: "d"
+		case .arch: "a"
+		case .peak: "e"
+		case .none: " "
+		}
+	}
 }
 
 enum QuarterTurn: Int, Codable, CaseIterable, Identifiable, Sendable {
@@ -95,6 +105,15 @@ enum QuarterTurn: Int, Codable, CaseIterable, Identifiable, Sendable {
 
     var id: Self { self }
     var degrees: Int { rawValue * 90 }
+
+	var clockwise: Self {
+		switch self {
+		case .zero: .one
+		case .one: .two
+		case .two: .three
+		case .three: .zero
+		}
+	}
 }
 
 enum TogglePosition: String, Codable, CaseIterable, Identifiable, Sendable {

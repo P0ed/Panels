@@ -156,6 +156,7 @@ struct PanelInspector: View {
             Picker("Shape", selection: editor.cellBinding(\.frame, actionName: "Change Frame")) {
                 ForEach(FramePreset.allCases) { preset in
                     Text(preset.name).tag(preset)
+						.keyboardShortcut(preset.shortcut, modifiers: .control)
                 }
             }
             if cell.frame != .none, cell.frame != .rectangle {
