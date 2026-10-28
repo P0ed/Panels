@@ -180,7 +180,9 @@ enum PanelRenderer {
         context.setLineCap(.round)
         context.setLineJoin(.round)
         switch control {
-        case .lemo1B303: drawLEMO(in: context)
+        case .lemo1B302: drawLEMO(pinCount: 2, in: context)
+        case .lemo1B303: drawLEMO(pinCount: 3, in: context)
+        case .lemo1B304: drawLEMO(pinCount: 4, in: context)
         case .pomona1581: drawBanana(cell.color, in: context)
         case .nkkMN12: drawToggle(cell.togglePosition, in: context)
         case .nkkMBNF15: drawButton(cell.color, in: context)
@@ -201,7 +203,7 @@ enum PanelRenderer {
         context.drawPath(using: .fillStroke)
     }
 
-    private static func drawLEMO(in context: CGContext) {
+    private static func drawLEMO(pinCount: Int, in context: CGContext) {
         context.setFillColor(PanelInk(0xD6D4D0).cgColor)
         context.setStrokeColor(PanelInk(0x696B69).cgColor)
         context.setLineWidth(0.18)
@@ -222,8 +224,13 @@ enum PanelRenderer {
         context.setStrokeColor(PanelInk(0xB8BAB5).cgColor)
         circle(in: context, radius: 3.9)
         context.strokePath()
-        for i in 0..<3 {
-            let angle = Double(i) * .pi * 2 / 3 - .pi / 2
+        let phase: Double = switch pinCount {
+        case 2: 0
+        case 4: .pi / 4
+        default: -.pi / 2
+        }
+        for i in 0..<pinCount {
+            let angle = Double(i) * .pi * 2 / Double(pinCount) + phase
             context.setFillColor(PanelInk(0x141615).cgColor)
             circle(in: context, center: CGPoint(x: cos(angle) * 2, y: sin(angle) * 2), radius: 0.68)
             context.drawPath(using: .fillStroke)

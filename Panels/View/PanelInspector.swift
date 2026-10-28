@@ -90,8 +90,13 @@ struct PanelInspector: View {
                 .accessibilityLabel("Clear cell")
             }
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                ForEach(ControlKind.allCases) { kind in
-                    controlTile(kind, selected: cell.control == kind)
+                ForEach(ControlKind.allCases.filter { !$0.isLEMO || $0 == .lemo1B303 }) { kind in
+                    let displayedKind: ControlKind = if kind.isLEMO, let control = cell.control, control.isLEMO {
+                        control
+                    } else {
+                        kind
+                    }
+                    controlTile(displayedKind, selected: cell.control == displayedKind)
                 }
             }
             HStack(spacing: 5) {
@@ -107,6 +112,16 @@ struct PanelInspector: View {
                         .font(.caption)
                         .help("Remove the control and keep the caption and frame")
                 }
+            }
+            if cell.control?.isLEMO == true {
+                Picker("Pins", selection: editor.cellBinding(\.control,
+                       actionName: "Change LEMO Pin Count")) {
+                    Text("2").tag(Optional(ControlKind.lemo1B302))
+                    Text("3").tag(Optional(ControlKind.lemo1B303))
+                    Text("4").tag(Optional(ControlKind.lemo1B304))
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("lemoPinCount")
             }
             VStack(alignment: .leading, spacing: 6) {
                 Text("Control name").font(.subheadline).foregroundStyle(.secondary)

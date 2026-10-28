@@ -84,6 +84,9 @@ final class PanelModelTests: XCTestCase {
 
     func testDocumentRoundTripIncludesHiddenCellsAndUnicode() throws {
         var design = PanelDesign()
+        for (index, control) in ControlKind.allCases.enumerated() {
+            design.cells[index].setControl(control)
+        }
         design.title = "SLOPE & ÉTAGE"
         let hidden = CellAddress(row: 5, column: 7)
         design[hidden].setControl(.vccCLB300)

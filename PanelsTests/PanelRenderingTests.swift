@@ -58,7 +58,7 @@ final class PanelRenderingTests: XCTestCase {
         var design = PanelDesign(size: .eightBySix,
                                  title: "A LONG MODULE TITLE WITH MULTIPLE WORDS · ÉTAGE Ω")
         for (index, address) in design.geometry.addresses.enumerated() {
-            design[address].setControl(ControlKind.allCases[index % 6])
+            design[address].setControl(ControlKind.allCases[index % ControlKind.allCases.count])
             design[address].frame = FramePreset.allCases[index % 5]
             design[address].frameRotation = QuarterTurn.allCases[index % 4]
             design[address].caption = index.isMultiple(of: 2) ? "SAMPLE\n& HOLD" : "VERY LONG CONTROL NAME Ω ±"
@@ -93,20 +93,21 @@ final class PanelRenderingTests: XCTestCase {
     }
 
     func testLongCaptionDoesNotCoverTheLEMOSocket() throws {
-        var design = PanelDesign()
-        design.title = ""
-        let address = CellAddress(row: 0, column: 0)
-        design[address].setControl(.lemo1B303)
-        let plain = try PNGExporter.image(design, resolution: .standard)
-        design[address].caption = String(repeating: "LONG CONTROL NAME ", count: 12)
-        let captioned = try PNGExporter.image(design, resolution: .standard)
-        let original = try XCTUnwrap(plain.dataProvider?.data as Data?)
-        let modified = try XCTUnwrap(captioned.dataProvider?.data as Data?)
-        for y in 204..<397 {
-            let start = y * plain.bytesPerRow + 91 * 4
-            let range = start..<(start + 193 * 4)
-            XCTAssertEqual(original.subdata(in: range), modified.subdata(in: range),
-                           "The caption changed hardware pixels at row \(y)")
+        for control in [ControlKind.lemo1B302, .lemo1B303, .lemo1B304] {
+            var design = PanelDesign(title: "")
+            let address = CellAddress(row: 0, column: 0)
+            design[address].setControl(control)
+            let plain = try PNGExporter.image(design, resolution: .standard)
+            design[address].caption = String(repeating: "LONG CONTROL NAME ", count: 12)
+            let captioned = try PNGExporter.image(design, resolution: .standard)
+            let original = try XCTUnwrap(plain.dataProvider?.data as Data?)
+            let modified = try XCTUnwrap(captioned.dataProvider?.data as Data?)
+            for y in 204..<397 {
+                let start = y * plain.bytesPerRow + 91 * 4
+                let range = start..<(start + 193 * 4)
+                XCTAssertEqual(original.subdata(in: range), modified.subdata(in: range),
+                               "The caption changed \(control.partName) pixels at row \(y)")
+            }
         }
     }
 }

@@ -10,7 +10,7 @@ Choose a **4 × 6** grid on a **4.25″ × 7″** panel or an **8 × 6** grid on
 
 Click a cell and choose its control in the left sidebar:
 
-- LEMO.1B.303 socket
+- LEMO socket, with a pin-count picker for 2-pin (1B.302), 3-pin (1B.303), or 4-pin (1B.304) versions
 - 4 mm Pomona 1581 banana jack
 - SPDT NKK MN12 toggle
 - SPDT NKK MBNF15 button

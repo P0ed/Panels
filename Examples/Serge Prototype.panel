@@ -221,9 +221,9 @@
       "togglePosition": "up"
     },
     {
-      "control": "pomona1581",
+      "control": "lemo1B302",
       "caption": "IN",
-      "color": "white",
+      "color": "black",
       "frame": "rectangle",
       "frameRotation": 0,
       "knobAngle": 35,
@@ -428,7 +428,7 @@
       "togglePosition": "up"
     },
     {
-      "control": "pomona1581",
+      "control": "lemo1B304",
       "caption": "OUT",
       "color": "black",
       "frame": "diamond",

@@ -140,6 +140,35 @@ final class PanelEditorTests: XCTestCase {
     }
 
     @MainActor
+    func testLEMOPinCountChangesPreserveCellSettingsAndSupportUndoRedo() async {
+        let holder = DesignHolder()
+        let editor = holder.editor
+        let undo = holder.undo
+        let address = CellAddress(row: 0, column: 0)
+        editor.state.selection = address
+        editor.setControl(.lemo1B303)
+        editor.editCell("Style Cell") {
+            $0.caption = "BAL. OUT"
+            $0.frame = .diamond
+            $0.frameRotation = .one
+        }
+        let pins = editor.cellBinding(\.control, actionName: "Change LEMO Pin Count")
+        for control in [ControlKind.lemo1B302, .lemo1B304, .lemo1B303] {
+            let original = holder.design[address]
+            var expected = original
+            expected.control = control
+            pins.wrappedValue = control
+            XCTAssertEqual(holder.design[address], expected)
+            XCTAssertTrue(control.isLEMO)
+            XCTAssertEqual(undo.undoActionName, "Change LEMO Pin Count")
+            undo.undo()
+            XCTAssertEqual(holder.design[address], original)
+            undo.redo()
+            XCTAssertEqual(holder.design[address], expected)
+        }
+    }
+
+    @MainActor
     func testResizeRetainsCellsAndSupportsUndoRedo() async {
         let holder = DesignHolder()
         let editor = holder.editor

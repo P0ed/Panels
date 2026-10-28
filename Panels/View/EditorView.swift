@@ -12,7 +12,7 @@ struct EditorView: View {
     var body: some View {
         NavigationSplitView {
             PanelInspector(design: $design, state: $state, editor: editor)
-                .navigationSplitViewColumnWidth(min: 290, ideal: 310, max: 340)
+                .navigationSplitViewColumnWidth(min: 270, ideal: 330, max: 390)
         } detail: {
             VStack(spacing: 0) {
                 PanelCanvas(design: design, state: $state, editor: editor)

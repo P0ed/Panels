@@ -15,7 +15,9 @@ enum PanelSize: String, Codable, CaseIterable, Identifiable, Sendable {
 }
 
 enum ControlKind: String, Codable, CaseIterable, Identifiable, Sendable {
+    case lemo1B302
     case lemo1B303
+    case lemo1B304
     case pomona1581
     case nkkMN12
     case nkkMBNF15
@@ -24,9 +26,16 @@ enum ControlKind: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var id: Self { self }
 
+    var isLEMO: Bool {
+        switch self {
+        case .lemo1B302, .lemo1B303, .lemo1B304: true
+        default: false
+        }
+    }
+
     var name: String {
         switch self {
-        case .lemo1B303: "LEMO socket"
+        case .lemo1B302, .lemo1B303, .lemo1B304: "LEMO socket"
         case .pomona1581: "Banana jack"
         case .nkkMN12: "Toggle"
         case .nkkMBNF15: "Button"
@@ -37,7 +46,9 @@ enum ControlKind: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var partName: String {
         switch self {
+        case .lemo1B302: "LEMO.1B.302"
         case .lemo1B303: "LEMO.1B.303"
+        case .lemo1B304: "LEMO.1B.304"
         case .pomona1581: "4 mm · Pomona 1581"
         case .nkkMN12: "SPDT · NKK MN12"
         case .nkkMBNF15: "SPDT · NKK MBNF15"
@@ -51,7 +62,7 @@ enum ControlKind: String, Codable, CaseIterable, Identifiable, Sendable {
         case .pomona1581: [.white, .black, .red, .blue, .green, .yellow, .orange, .brown, .violet, .gray]
         case .nkkMBNF15: [.black, .white, .red, .yellow, .green, .blue]
         case .vccCLB300: [.amber, .red, .green, .blue, .white, .yellow]
-        case .lemo1B303, .nkkMN12, .bourns51: []
+        case .lemo1B302, .lemo1B303, .lemo1B304, .nkkMN12, .bourns51: []
         }
     }
 
