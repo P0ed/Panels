@@ -17,7 +17,7 @@ final class PanelRenderingTests: XCTestCase {
             var design = PanelDesign(title: "", finish: finish)
             let address = CellAddress(row: 0, column: 0)
             design[address].setControl(.pomona1581)
-            design[address].frame = .diamond
+            design[address].frame = .dualTriangles
             design[address].caption = "IN"
             artworks.insert(try PNGExporter.data(design, resolution: .standard))
         }
@@ -75,6 +75,9 @@ final class PanelRenderingTests: XCTestCase {
     func testNewFrameGeometryAndQuarterTurns() throws {
         typealias Point = (x: Double, y: Double)
         let samples: [(frame: FramePreset, stroked: [Point], empty: [Point])] = [
+            (.dualTriangles, [(0.1, 1), (1, 0), (0.1, -1), (0.1, 0), (0.55, 0.5), (0.55, -0.5),
+                              (-0.1, 1), (-1, 0), (-0.1, -1), (-0.1, 0), (-0.55, 0.5), (-0.55, -0.5)],
+             [(0, 1), (0, 0), (0, -1), (0.5, 0), (-0.5, 0), (0.5, 0.5), (-0.5, 0.5)]),
             (.triangle, [(-1, 0), (0, 1), (1, 0), (0, 0), (-0.5, 0.5), (0.5, 0.5)],
              [(0, -1), (-1, 1), (1, 1)]),
             (.cross, [(-1, 1), (1, 1), (0, 0), (-1, -1), (1, -1)],
@@ -97,15 +100,17 @@ final class PanelRenderingTests: XCTestCase {
                                         rect: CGRect(x: 2.3, y: 2.3, width: 25.4, height: 25.4))
                 let image = try XCTUnwrap(context.makeImage())
                 let pixels = try XCTUnwrap(image.dataProvider?.data as Data?)
-                func hasStroke(at point: Point) -> Bool {
+                let frameInset = sample.frame == .dualTriangles ? 0.8 : 0
+                func hasStroke(at point: Point, inset: Double) -> Bool {
                     let rotated: Point = switch rotation {
                     case .zero: point
                     case .one: (point.y, -point.x)
                     case .two: (-point.x, -point.y)
                     case .three: (-point.y, point.x)
                     }
-                    let x = Int((150 + rotated.x * 127).rounded())
-                    let y = Int((150 - rotated.y * 127).rounded())
+                    let halfExtent = 127 - inset * 10
+                    let x = Int((150 + rotated.x * halfExtent).rounded())
+                    let y = Int((150 - rotated.y * halfExtent).rounded())
                     return ((y - 1)...(y + 1)).contains { row in
                         ((x - 1)...(x + 1)).contains { column in
                             pixels[row * image.bytesPerRow + column * 4] < 200
@@ -113,12 +118,18 @@ final class PanelRenderingTests: XCTestCase {
                     }
                 }
                 for point in sample.stroked {
-                    XCTAssertTrue(hasStroke(at: point),
+                    XCTAssertTrue(hasStroke(at: point, inset: frameInset),
                                   "\(sample.frame.name) at \(rotation.degrees)° is missing an edge at \(point)")
                 }
                 for point in sample.empty {
-                    XCTAssertFalse(hasStroke(at: point),
+                    XCTAssertFalse(hasStroke(at: point, inset: frameInset),
                                    "\(sample.frame.name) at \(rotation.degrees)° has an extra edge at \(point)")
+                }
+                if sample.frame == .dualTriangles {
+                    for point: Point in [(0.1, 1), (1, 0), (0.1, -1), (-0.1, 1), (-1, 0), (-0.1, -1)] {
+                        XCTAssertFalse(hasStroke(at: point, inset: 0),
+                                       "Dual triangles at \(rotation.degrees)° touch the cell edge at \(point)")
+                    }
                 }
             }
         }

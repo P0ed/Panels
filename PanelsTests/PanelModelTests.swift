@@ -99,6 +99,17 @@ final class PanelModelTests: XCTestCase {
         XCTAssertEqual(restored[hidden].caption, "CV ± / Ω\nGate")
     }
 
+    func testDualTrianglesUseCurrentIdentifierAndAcceptLegacyDiamond() throws {
+        let decoder = JSONDecoder()
+        for identifier in ["dualTriangles", "diamond"] {
+            let data = try JSONEncoder().encode(identifier)
+            XCTAssertEqual(try decoder.decode(FramePreset.self, from: data), .dualTriangles)
+        }
+        XCTAssertEqual(try JSONEncoder().encode(FramePreset.dualTriangles),
+                       try JSONEncoder().encode("dualTriangles"))
+        XCTAssertThrowsError(try decoder.decode(FramePreset.self, from: Data(#""unknown""#.utf8)))
+    }
+
     func testInvalidDocumentsAreRejected() throws {
         var design = PanelDesign()
         design.version = 2

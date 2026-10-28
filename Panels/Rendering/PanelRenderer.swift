@@ -147,12 +147,17 @@ enum PanelRenderer {
         case .none: break
         case .rectangle:
             context.addRect(CGRect(x: 0, y: 0, width: width, height: height))
-        case .diamond:
-            context.move(to: CGPoint(x: width / 2, y: 0))
-            context.addLine(to: CGPoint(x: width, y: height / 2))
-            context.addLine(to: CGPoint(x: width / 2, y: height))
-            context.addLine(to: CGPoint(x: 0, y: height / 2))
-            context.closePath()
+        case .dualTriangles:
+            let inset: CGFloat = 0.33
+            context.translateBy(x: inset, y: inset)
+            let width = rect.width - 2 * inset
+            let height = rect.height - 2 * inset
+            for (baseX, tipX) in [(width * 0.45, 0.0), (width * 0.55, width)] {
+                context.move(to: CGPoint(x: baseX, y: 0))
+                context.addLine(to: CGPoint(x: tipX, y: height / 2))
+                context.addLine(to: CGPoint(x: baseX, y: height))
+                context.closePath()
+            }
         case .arch:
             context.move(to: CGPoint(x: 0, y: height))
             context.addLine(to: CGPoint(x: 0, y: 6.4))

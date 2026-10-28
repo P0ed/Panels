@@ -42,7 +42,7 @@ struct RenderAssets {
         context.strokePath()
         let controls: [(ControlKind, PanelColor, FramePreset, CGPoint)] = [
             (.pomona1581, .white, .rectangle, CGPoint(x: 32, y: 32)),
-            (.pomona1581, .red, .diamond, CGPoint(x: 68, y: 32)),
+            (.pomona1581, .red, .dualTriangles, CGPoint(x: 68, y: 32)),
             (.bourns51, .black, .arch, CGPoint(x: 32, y: 68)),
             (.nkkMN12, .black, .peak, CGPoint(x: 68, y: 68)),
         ]

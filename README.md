@@ -17,7 +17,7 @@ Click a cell and choose its control in the left sidebar:
 - LED with a lens VCC CLB-300
 - Bourns 51 potentiometer
 
-Add an optional control name, choose colors where applicable, and choose a rectangle, diamond, arch, peak, triangle, cross (X), or angle frame. Triangle spans the upper half of a cell; Angle is a right triangle joining three cell corners. Frames rotate in 90° steps. The module name appears at the top of the panel.
+Add an optional control name, choose colors where applicable, and choose a rectangle, dual triangles, arch, peak, triangle, cross (X), or angle frame. Dual triangles point outward with a gap between their vertical bases and sit slightly inside the cell edges; they replace Diamond in saved panels. Triangle spans the upper half of a cell; Angle is a right triangle joining three cell corners. Frames rotate in 90° steps. The module name appears at the top of the panel.
 
 Panel lettering uses the bundled **Futura Medium** font. Choose **ENIG** (gold), **Aluminum** (silver), or **Enamel** (cream) in the sidebar. The finish is saved with the design and used in both the preview and PNG export. Existing files without a finish keep Enamel.
 

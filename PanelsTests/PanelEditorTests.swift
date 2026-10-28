@@ -85,10 +85,10 @@ final class PanelEditorTests: XCTestCase {
         caption.wrappedValue = "FIRST"
         caption.wrappedValue = ""
         caption.wrappedValue = "LAST"
-        frame.wrappedValue = .diamond
+        frame.wrappedValue = .dualTriangles
         editor.state.selection = target
         XCTAssertEqual(holder.design[source].caption, "LAST")
-        XCTAssertEqual(holder.design[source].frame, .diamond)
+        XCTAssertEqual(holder.design[source].frame, .dualTriangles)
         XCTAssertEqual(holder.design[target], PanelCell())
     }
 
@@ -102,7 +102,7 @@ final class PanelEditorTests: XCTestCase {
         let toggle = CellAddress(row: 2, column: 3)
         holder.design[toggle].setControl(.nkkMN12)
         holder.design[toggle].caption = "MODE"
-        holder.design[toggle].frame = .diamond
+        holder.design[toggle].frame = .dualTriangles
         holder.design[toggle].frameRotation = .two
         holder.design[toggle].togglePosition = .down
         let pot = CellAddress(row: 4, column: 1)
@@ -114,7 +114,7 @@ final class PanelEditorTests: XCTestCase {
         let editor = holder.editor
         editor.state.selection = toggle
         XCTAssertEqual(editor.cellBinding(\.caption, actionName: "Name").wrappedValue, "MODE")
-        XCTAssertEqual(editor.cellBinding(\.frame, actionName: "Frame").wrappedValue, .diamond)
+        XCTAssertEqual(editor.cellBinding(\.frame, actionName: "Frame").wrappedValue, .dualTriangles)
         XCTAssertEqual(editor.cellBinding(\.frameRotation, actionName: "Rotate").wrappedValue, .two)
         XCTAssertEqual(editor.cellBinding(\.togglePosition, actionName: "Lever").wrappedValue, .down)
         editor.state.selection = pot
@@ -149,7 +149,7 @@ final class PanelEditorTests: XCTestCase {
         editor.setControl(.lemo1B303)
         editor.editCell("Style Cell") {
             $0.caption = "BAL. OUT"
-            $0.frame = .diamond
+            $0.frame = .dualTriangles
             $0.frameRotation = .one
         }
         let pins = editor.cellBinding(\.control, actionName: "Change LEMO Pin Count")
@@ -205,7 +205,7 @@ final class PanelEditorTests: XCTestCase {
         editor.editCell("Style Cell") {
             $0.color = .red
             $0.caption = "CYCLE"
-            $0.frame = .diamond
+            $0.frame = .dualTriangles
         }
         editor.copyCell()
         XCTAssertNotNil(clipboard.cellData)

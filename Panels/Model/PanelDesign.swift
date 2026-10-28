@@ -96,14 +96,31 @@ enum PanelFinish: String, Codable, CaseIterable, Identifiable, Sendable {
 }
 
 enum FramePreset: String, Codable, CaseIterable, Identifiable, Sendable {
-    case none, rectangle, diamond, arch, peak, triangle, cross, angle
+    case none, rectangle
+    case dualTriangles
+    case arch, peak, triangle, cross, angle
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let identifier = try container.decode(String.self)
+        let rawValue = identifier == "diamond" ? "dualTriangles" : identifier
+        guard let preset = Self(rawValue: rawValue) else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unknown frame preset.")
+        }
+        self = preset
+    }
 
     var id: Self { self }
-    var name: String { rawValue.capitalized }
+    var name: String {
+        switch self {
+        case .dualTriangles: "Dual triangles"
+        default: rawValue.capitalized
+        }
+    }
 	var shortcut: KeyEquivalent {
 		switch self {
 		case .rectangle: "s"
-		case .diamond: "d"
+		case .dualTriangles: "d"
 		case .arch: "a"
 		case .peak: "e"
 		case .triangle: "t"
