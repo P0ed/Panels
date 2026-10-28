@@ -113,13 +113,13 @@ enum PanelRenderer {
                          rect: CGRect(x: rect.minX + 0.8, y: rect.minY + 21.1,
                                       width: rect.width - 1.6, height: 4.1),
                          fontSize: 2.45, minimumFontSize: 1.65, maxLines: 2,
-                         tracking: 0.035, background: background)
+						 tracking: 0.035)
             }
         }
         drawText(design.title, in: context,
                  rect: CGRect(x: 13, y: 1.1, width: width - 26, height: 10.2),
                  fontSize: 3.65, minimumFontSize: 2.2, maxLines: 2,
-                 tracking: 0.17, background: nil)
+                 tracking: 0.17)
     }
 
     static func screenRect(_ rect: PhysicalRect, panelHeight: Int) -> CGRect {
@@ -370,7 +370,7 @@ enum PanelRenderer {
 
     private static func drawText(_ text: String, in context: CGContext, rect: CGRect,
                                  fontSize initialSize: Double, minimumFontSize: Double,
-                                 maxLines: Int, tracking: Double, background: CGColor?) {
+                                 maxLines: Int, tracking: Double) {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard !text.isEmpty else { return }
         var fontSize = initialSize
@@ -400,13 +400,8 @@ enum PanelRenderer {
         context.saveGState()
         defer { context.restoreGState() }
         context.clip(to: rect.insetBy(dx: -0.7, dy: -0.35))
-        if let background {
-            let width = min(rect.width, widths.max() ?? 0)
-            context.setFillColor(background)
-            context.fill(CGRect(x: rect.midX - width / 2 - 0.7, y: startY - 0.25,
-                                width: width + 1.4, height: blockHeight + 0.5))
-        }
-        for (index, line) in lines.enumerated() {
+
+		for (index, line) in lines.enumerated() {
             var ascent: CGFloat = 0
             var descent: CGFloat = 0
             CTLineGetTypographicBounds(line, &ascent, &descent, nil)
