@@ -10,16 +10,16 @@ Choose a **4 × 6** grid on a **4.25″ × 7″** panel or an **8 × 6** grid on
 
 Click a cell and choose its control in the left sidebar:
 
-- LEMO socket, with a pin-count picker for 2-pin (1B.302), 3-pin (1B.303), or 4-pin (1B.304) versions
-- 4 mm Pomona 1581 banana jack
-- SPDT NKK MN12 toggle
-- SPDT NKK MBNF15 button
-- LED with a VCC CLB-300 lens
-- Bourns 51 potentiometer with a fluted knob
+- Socket LEMO 1B.302, 1B.303 or 1B.304
+- 4 mm banana jack Pomona 1581
+- SPDT toggle NKK MN12
+- SPDT button NKK MBNF15
+- LED with a lens VCC CLB-300
+- Bourns 51 potentiometer
 
-Add an optional control name, choose colors where applicable, and choose a rectangle, diamond, arch, or peak frame. Frames can rotate. The module name appears at the top of the panel.
+Add an optional control name, choose colors where applicable, and choose a rectangle, diamond, arch, peak, triangle, cross (X), or angle frame. Triangle spans the upper half of a cell; Angle is a right triangle joining three cell corners. Frames rotate in 90° steps. The module name appears at the top of the panel.
 
-Panel lettering uses the bundled **Futura Medium** font from `../3U-Serge`. Choose **ENIG** (gold), **Aluminum** (silver), or **Enamel** (cream) in the sidebar. The finish is saved with the design and used in both the preview and PNG export. Existing files without a finish keep Enamel.
+Panel lettering uses the bundled **Futura Medium** font. Choose **ENIG** (gold), **Aluminum** (silver), or **Enamel** (cream) in the sidebar. The finish is saved with the design and used in both the preview and PNG export. Existing files without a finish keep Enamel.
 
 The four mounting holes are **3.2 mm** in diameter. Their centers are **9 mm** from the left/right edges and **6.5 mm** from the top/bottom edges.
 

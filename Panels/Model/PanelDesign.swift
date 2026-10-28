@@ -96,7 +96,7 @@ enum PanelFinish: String, Codable, CaseIterable, Identifiable, Sendable {
 }
 
 enum FramePreset: String, Codable, CaseIterable, Identifiable, Sendable {
-    case none, rectangle, diamond, arch, peak
+    case none, rectangle, diamond, arch, peak, triangle, cross, angle
 
     var id: Self { self }
     var name: String { rawValue.capitalized }
@@ -106,6 +106,9 @@ enum FramePreset: String, Codable, CaseIterable, Identifiable, Sendable {
 		case .diamond: "d"
 		case .arch: "a"
 		case .peak: "e"
+		case .triangle: "t"
+		case .cross: "x"
+		case .angle: "g"
 		case .none: " "
 		}
 	}

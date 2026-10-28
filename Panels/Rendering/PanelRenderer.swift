@@ -168,6 +168,21 @@ enum PanelRenderer {
             context.addLine(to: CGPoint(x: width, y: 7.8))
             context.addLine(to: CGPoint(x: width, y: height))
             context.closePath()
+        case .triangle:
+            context.move(to: CGPoint(x: 0, y: height / 2))
+            context.addLine(to: CGPoint(x: width / 2, y: 0))
+            context.addLine(to: CGPoint(x: width, y: height / 2))
+            context.closePath()
+        case .cross:
+            context.move(to: .zero)
+            context.addLine(to: CGPoint(x: width, y: height))
+            context.move(to: CGPoint(x: 0, y: height))
+            context.addLine(to: CGPoint(x: width, y: 0))
+        case .angle:
+            context.move(to: .zero)
+            context.addLine(to: CGPoint(x: width, y: 0))
+            context.addLine(to: CGPoint(x: width, y: height))
+            context.closePath()
         }
         context.strokePath()
     }

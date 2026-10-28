@@ -59,8 +59,10 @@ final class PanelRenderingTests: XCTestCase {
                                  title: "A LONG MODULE TITLE WITH MULTIPLE WORDS · ÉTAGE Ω")
         for (index, address) in design.geometry.addresses.enumerated() {
             design[address].setControl(ControlKind.allCases[index % ControlKind.allCases.count])
-            design[address].frame = FramePreset.allCases[index % 5]
-            design[address].frameRotation = QuarterTurn.allCases[index % 4]
+            design[address].frame = FramePreset.allCases[
+                (index / QuarterTurn.allCases.count) % FramePreset.allCases.count
+            ]
+            design[address].frameRotation = QuarterTurn.allCases[index % QuarterTurn.allCases.count]
             design[address].caption = index.isMultiple(of: 2) ? "SAMPLE\n& HOLD" : "VERY LONG CONTROL NAME Ω ±"
         }
         let data = try PNGExporter.data(design, resolution: .standard)
@@ -68,6 +70,58 @@ final class PanelRenderingTests: XCTestCase {
         let directory = URL(fileURLWithPath: "/tmp/PanelsArtifacts", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try data.write(to: directory.appendingPathComponent("frame-and-label-check.png"), options: .atomic)
+    }
+
+    func testNewFrameGeometryAndQuarterTurns() throws {
+        typealias Point = (x: Double, y: Double)
+        let samples: [(frame: FramePreset, stroked: [Point], empty: [Point])] = [
+            (.triangle, [(-1, 0), (0, 1), (1, 0), (0, 0), (-0.5, 0.5), (0.5, 0.5)],
+             [(0, -1), (-1, 1), (1, 1)]),
+            (.cross, [(-1, 1), (1, 1), (0, 0), (-1, -1), (1, -1)],
+             [(0, 1), (1, 0), (0, -1), (-1, 0)]),
+            (.angle, [(-1, 1), (1, 1), (1, -1), (0, 1), (1, 0), (0, 0)],
+             [(-1, 0), (0, -1), (-1, -1)]),
+        ]
+        for sample in samples {
+            for rotation in QuarterTurn.allCases {
+                let context = try XCTUnwrap(CGContext(
+                    data: nil, width: 300, height: 300, bitsPerComponent: 8, bytesPerRow: 1_200,
+                    space: CGColorSpaceCreateDeviceRGB(),
+                    bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+                ))
+                context.setFillColor(CGColor(gray: 1, alpha: 1))
+                context.fill(CGRect(x: 0, y: 0, width: 300, height: 300))
+                context.translateBy(x: 0, y: 300)
+                context.scaleBy(x: 10, y: -10)
+                PanelRenderer.drawFrame(sample.frame, rotation: rotation, in: context,
+                                        rect: CGRect(x: 2.3, y: 2.3, width: 25.4, height: 25.4))
+                let image = try XCTUnwrap(context.makeImage())
+                let pixels = try XCTUnwrap(image.dataProvider?.data as Data?)
+                func hasStroke(at point: Point) -> Bool {
+                    let rotated: Point = switch rotation {
+                    case .zero: point
+                    case .one: (point.y, -point.x)
+                    case .two: (-point.x, -point.y)
+                    case .three: (-point.y, point.x)
+                    }
+                    let x = Int((150 + rotated.x * 127).rounded())
+                    let y = Int((150 - rotated.y * 127).rounded())
+                    return ((y - 1)...(y + 1)).contains { row in
+                        ((x - 1)...(x + 1)).contains { column in
+                            pixels[row * image.bytesPerRow + column * 4] < 200
+                        }
+                    }
+                }
+                for point in sample.stroked {
+                    XCTAssertTrue(hasStroke(at: point),
+                                  "\(sample.frame.name) at \(rotation.degrees)° is missing an edge at \(point)")
+                }
+                for point in sample.empty {
+                    XCTAssertFalse(hasStroke(at: point),
+                                   "\(sample.frame.name) at \(rotation.degrees)° has an extra edge at \(point)")
+                }
+            }
+        }
     }
 
     func testPreviewAndExportUseTheSameArtwork() throws {

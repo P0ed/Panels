@@ -377,7 +377,7 @@
       "control": "pomona1581",
       "caption": "SUSTAIN",
       "color": "red",
-      "frame": "peak",
+      "frame": "triangle",
       "frameRotation": 0,
       "knobAngle": 35,
       "togglePosition": "up"
@@ -386,7 +386,7 @@
       "control": "pomona1581",
       "caption": "MOD",
       "color": "black",
-      "frame": "diamond",
+      "frame": "cross",
       "frameRotation": 0,
       "knobAngle": 35,
       "togglePosition": "up"
@@ -395,7 +395,7 @@
       "control": "pomona1581",
       "caption": "SIZE",
       "color": "white",
-      "frame": "rectangle",
+      "frame": "angle",
       "frameRotation": 0,
       "knobAngle": 35,
       "togglePosition": "up"
